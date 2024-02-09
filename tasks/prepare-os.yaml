@@ -1,0 +1,110 @@
+---
+
+- name: Create directory {{ k3s_data_dir }}/agent/images
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/agent/images
+    state: directory
+    mode: 0755
+
+- name: Copy airgap images to {{k3s_data_dir}}
+  ansible.builtin.get_url:
+    url: '{{ webserver }}/{{ k3s_release_version }}/k3s-airgap-images-amd64.tar.gz'
+    dest: '{{ k3s_data_dir }}/agent/images/k3s-airgap-images-amd64.tar.gz'
+    mode: 0644
+
+- name: Copy {{ k3s_selinux_policy }}
+  ansible.builtin.get_url:
+    url: '{{ webserver }}/{{ k3s_selinux_policy }}'
+    dest: /tmp/{{ k3s_selinux_policy }}
+
+- name: Install selinux policy for k3s
+  ansible.builtin.dnf:
+    name: /tmp/{{ k3s_selinux_policy }}
+    disable_gpg_check: true
+    state: present
+
+- name: Install latest version of nfs-utils, policycoreutils-restorecond
+  ansible.builtin.dnf:
+    name:
+      - nfs-utils
+      - policycoreutils-restorecond
+    state: latest
+
+- name: Copy restorecond.conf to /etc/selinux/restorecond.conf
+  ansible.builtin.copy:
+    src: templates/restorecond.conf
+    dest: /etc/selinux/restorecond.conf
+    mode: 0644
+
+- name: Allow http traffic
+  ansible.posix.firewalld:
+    zone: public
+    service: http
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Allow https traffic
+  ansible.posix.firewalld:
+    zone: public
+    service: https
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Allow on all nodes 8472/udp
+  ansible.posix.firewalld:
+    zone: public
+    port: 8472/udp
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Allow on all nodes 10250/tcp
+  ansible.posix.firewalld:
+    zone: public
+    port: 10250/tcp
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Allow on all nodes 6443/tcp
+  ansible.posix.firewalld:
+    zone: public
+    port: 6443/tcp
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Allow on all control nodes 2379-2380/tcp
+  ansible.posix.firewalld:
+    zone: public
+    port: 2379-2380/tcp
+    permanent: true
+    immediate: true
+    state: enabled
+  when: k3s_control_node is true
+
+- name: Add interface {{ k3s_interface_name }} to public zone
+  ansible.posix.firewalld:
+    zone: public
+    interface: "{{ k3s_interface_name }}"
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Add interface cni0 to trusted zone
+  ansible.posix.firewalld:
+    zone: trusted
+    interface: cni0
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Add interface flannel.1 to trusted zone
+  ansible.posix.firewalld:
+    zone: trusted
+    interface: flannel.1
+    permanent: true
+    immediate: true
+    state: enabled

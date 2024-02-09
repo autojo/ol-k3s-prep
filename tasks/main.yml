@@ -1,0 +1,25 @@
+---
+# tasks file for ol-k3s-prep
+
+- name: Upgrade all packages
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+  when: k3s_allow_os_upgrade is true
+
+- name: Create directories, copy required files and set up firewall
+  import_tasks: prepare-os.yaml
+
+- name: Install keepalived
+  include_tasks: keepalived.yaml
+  when: k3s_control_node and k3s_keepalived
+
+- name: Looking for k3s service
+  stat:
+    path: /etc/systemd/system/k3s.service
+  register: reg_k3s_service
+
+- name: Reboot VM
+  ansible.builtin.reboot:
+    reboot_timeout: 120
+  when: reg_k3s_service.stat.exists is false
