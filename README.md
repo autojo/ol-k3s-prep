@@ -7,13 +7,11 @@ Requirements
 ------------
 
 A webserver with context webserver.my.domain/k3s with the following files
-* restorecond.conf 
 * k3s-selinux policy
 
 ```bash
 k3s
-├── k3s-selinux-1.4-1.el9.noarch.rpm
-└── restorecond.conf
+└── k3s-selinux-1.4-1.el9.noarch.rpm
 ```
 
 Role Variables
@@ -33,7 +31,7 @@ Example Playbook
   remote_user: root
   become: true
   vars:
-    webserver: 'http://webserver.my.comain/k3s'
+    webserver: 'http://webserver.my.domain/k3s'
     k3s_allow_os_upgrade: true
     k3s_selinux_policy: k3s-selinux-1.4-1.el9.noarch.rpm
     k3s_interface_name: enp0s3
